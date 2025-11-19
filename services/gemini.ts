@@ -7,7 +7,28 @@ import { GoogleGenAI, GenerateContentResponse } from "@google/genai";
 // Using gemini-2.5-pro for complex coding tasks.
 const GEMINI_MODEL = 'gemini-3-pro-preview';
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+// Get API key from environment variable (Vite requires VITE_ prefix)
+const getApiKey = () => {
+  return import.meta.env.VITE_GOOGLE_API_KEY || 
+         import.meta.env.VITE_API_KEY || 
+         import.meta.env.VITE_GEMINI_API_KEY;
+};
+
+// Lazy initialization - only create the client when needed
+let aiClient: GoogleGenAI | null = null;
+
+const getAIClient = () => {
+  if (!aiClient) {
+    const apiKey = getApiKey();
+    if (!apiKey) {
+      console.error("⚠️ API Key is missing! Please set VITE_GOOGLE_API_KEY in your .env.local file");
+      console.error("Get your API key from: https://aistudio.google.com/app/apikey");
+      throw new Error("API Key is not configured. Please create a .env.local file with VITE_GOOGLE_API_KEY.\n\nGet your API key from: https://aistudio.google.com/app/apikey");
+    }
+    aiClient = new GoogleGenAI({ apiKey });
+  }
+  return aiClient;
+};
 
 const SYSTEM_INSTRUCTION = `You are an expert AI Engineer and Product Designer specializing in "bringing artifacts to life".
 Your goal is to take a user uploaded file—which might be a polished UI design, a messy napkin sketch, a photo of a whiteboard with jumbled notes, or a picture of a real-world object (like a messy desk)—and instantly generate a fully functional, interactive, single-page HTML/JS/CSS application.
@@ -52,6 +73,9 @@ export async function bringToLife(prompt: string, fileBase64?: string, mimeType?
   }
 
   try {
+    // Get the AI client (this will throw if API key is missing)
+    const ai = getAIClient();
+    
     const response: GenerateContentResponse = await ai.models.generateContent({
       model: GEMINI_MODEL,
       contents: {

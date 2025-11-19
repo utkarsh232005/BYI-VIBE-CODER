@@ -127,7 +127,14 @@ const App: React.FC = () => {
 
     } catch (error) {
       console.error("Failed to generate:", error);
-      alert("Something went wrong while bringing your file to life. Please try again.");
+      
+      // Check if it's an API key error
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      if (errorMessage.includes('API Key')) {
+        alert("⚠️ API Key Missing!\n\n" + errorMessage);
+      } else {
+        alert("Something went wrong while bringing your file to life. Please try again.\n\nError: " + errorMessage);
+      }
     } finally {
       setIsGenerating(false);
     }
